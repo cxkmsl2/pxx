@@ -13,7 +13,11 @@ type Services struct {
 	Post     *PostService
 	GroupBuy *GroupBuyService
 	Rental   *RentalService
-	Barter   *BarterService
+	Barter       *BarterService
+	Subscription *SubscriptionService
+	Task         *TaskService
+	Message      *MessageService
+	Dispute      *DisputeService
 }
 
 func NewServices(db *gorm.DB, cm *cache.CacheManager) *Services {
@@ -24,6 +28,10 @@ func NewServices(db *gorm.DB, cm *cache.CacheManager) *Services {
 		Post:     NewPostService(db, cm),
 		GroupBuy: NewGroupBuyService(db, cm),
 		Rental:   NewRentalService(db, cm),
-		Barter:   NewBarterService(db, cm),
+		Barter:       NewBarterService(db, cm),
+		Subscription: NewSubscriptionService(db, cm),
+		Task:         NewTaskService(db, cm),
+		Message:      NewMessageService(db),
+		Dispute:      NewDisputeService(db),
 	}
 }

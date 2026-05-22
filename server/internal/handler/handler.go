@@ -11,7 +11,11 @@ type Handlers struct {
 	Post     *PostHandler
 	GroupBuy *GroupBuyHandler
 	Rental   *RentalHandler
-	Barter   *BarterHandler
+	Barter       *BarterHandler
+	Subscription *SubscriptionHandler
+	Task         *TaskHandler
+	Message      *MessageHandler
+	Dispute      *DisputeHandler
 }
 
 func NewHandlers(svc *service.Services) *Handlers {
@@ -22,6 +26,10 @@ func NewHandlers(svc *service.Services) *Handlers {
 		Post:     NewPostHandler(svc.Post),
 		GroupBuy: NewGroupBuyHandler(svc.GroupBuy),
 		Rental:   NewRentalHandler(svc.Rental),
-		Barter:   NewBarterHandler(svc.Barter),
+		Barter:       NewBarterHandler(svc.Barter),
+		Subscription: NewSubscriptionHandler(svc.Subscription),
+		Task:         NewTaskHandler(svc.Task),
+		Message:      NewMessageHandler(svc.Message),
+		Dispute:      NewDisputeHandler(svc.Dispute),
 	}
 }

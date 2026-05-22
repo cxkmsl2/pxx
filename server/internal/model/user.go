@@ -13,6 +13,7 @@ type User struct {
 	Dormitory   string    `gorm:"size:64" json:"dormitory"`
 	IsVerified  bool      `gorm:"default:false" json:"is_verified"`
 	Balance     int64     `gorm:"default:0" json:"balance"`
+	Credit      int       `gorm:"default:60" json:"credit"`
 	Role        string    `gorm:"size:20;default:user" json:"role"`
 	Status      int8      `gorm:"default:1" json:"status"`
 	CreatedAt   time.Time `json:"created_at"`

@@ -3,7 +3,7 @@
     <div class="nav">🔄 以物换物</div>
     <div v-if="loading">加载中...</div>
     <div v-else>
-      <div class="card" v-for="item in items" :key="item.id">
+      <div class="card" v-for="item in items" :key="item.id" @click="$router.push('/barter/'+item.id)">
         <div class="card-thumb" :class="'bg' + (item.id % 4)"></div>
         <div class="card-title">📤 {{ item.title }}</div>
         <div class="card-want">🔁 想换：{{ item.want_item }}</div>
@@ -50,14 +50,14 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-.page { background: #f5f5f5; min-height: 100vh; }
+.page { background: #F8FAFC; min-height: 100vh; }
 .nav { padding: 12px; background: #fff; font-size: 15px; font-weight: 600; }
 .loading, .empty { text-align: center; padding: 40px; color: #999; font-size: 13px; }
 
 .card { margin: 10px 12px; padding: 14px; background: #fff; border-radius: 12px; }
 .card-thumb { width: 100%; height: 100px; border-radius: 10px; margin-bottom: 12px; }
 .card-title { font-size: 15px; font-weight: 600; color: #222; }
-.card-want { font-size: 13px; color: #ff4d4f; margin-top: 6px; font-weight: 500; }
+.card-want { font-size: 13px; color: #1D4ED8; margin-top: 6px; font-weight: 500; }
 .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
 .card-meta { font-size: 11px; color: #aaa; }
 .agree-btn {
@@ -65,8 +65,8 @@ onMounted(() => loadData())
   color: #fff; border-radius: 14px; font-size: 12px; font-weight: 600; cursor: pointer;
 }
 
-.bg0 { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
-.bg1 { background: linear-gradient(135deg, #4834d4, #686de0); }
+.bg0 { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+.bg1 { background: linear-gradient(135deg, #1E40AF, #686de0); }
 .bg2 { background: linear-gradient(135deg, #22a6b3, #7ed6df); }
 .bg3 { background: linear-gradient(135deg, #f9ca24, #f0932b); }
 </style>

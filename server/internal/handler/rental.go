@@ -3,7 +3,7 @@ package handler
 import (
 	"strconv"
 
-	"pxx/internal/model"
+	"pxx/internal/middleware"
 	"pxx/internal/service"
 	"pxx/pkg/response"
 
@@ -41,17 +41,15 @@ func (h *RentalHandler) Detail(c *gin.Context) {
 
 func (h *RentalHandler) CreateOrder(c *gin.Context) {
 	rentalID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	var order model.RentalOrder
-	if err := c.ShouldBindJSON(&order); err != nil {
-		response.Fail(c, 400, "参数错误")
-		return
+	var req struct {
+		Days int `json:"days"`
 	}
-	order.RentalID = uint(rentalID)
-	order.Status = model.RentalStatusPending
-	if err := h.svc.CreateOrder(c.Request.Context(), &order); err != nil {
-		response.Error(c, err.Error())
-		return
+	if err := c.ShouldBindJSON(&req); err != nil || req.Days <= 0 {
+		req.Days = 1
 	}
+	userID := middleware.GetUserID(c)
+	order, err := h.svc.CreateOrderSimple(c.Request.Context(), uint(rentalID), userID, req.Days)
+	if err != nil { response.Error(c, err.Error()); return }
 	response.OK(c, order)
 }
 

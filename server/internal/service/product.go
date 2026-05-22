@@ -45,6 +45,9 @@ func (s *ProductService) List(ctx context.Context, category, campus, keyword str
 }
 
 func (s *ProductService) Detail(ctx context.Context, id uint) (*model.Product, error) {
+	// Increment view count
+	s.db.WithContext(ctx).Model(&model.Product{}).Where("id = ?", id).UpdateColumn("view_count", gorm.Expr("view_count + 1"))
+
 	key := cache.BuildKey("product", id)
 	var p model.Product
 	err := s.cache.GetOrLoad(ctx, key, &p, 30*time.Minute, func(ctx context.Context) (interface{}, error) {

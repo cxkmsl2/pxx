@@ -36,7 +36,7 @@ const doLogin = async () => {
       window.$toast('登录成功！')
       router.back()
     } else {
-      alert(res.msg)
+      window.$toast(res.msg)
     }
   } catch { window.$toast('网络错误') }
   loading.value = false
@@ -44,7 +44,7 @@ const doLogin = async () => {
 </script>
 
 <style scoped>
-.login { min-height: 100vh; background: #f5f5f5; }
+.login { min-height: 100vh; background: #F8FAFC; }
 .nav { padding: 14px; background: #fff; font-size: 16px; font-weight: 600; }
 .form { padding: 30px 20px; }
 .label { font-size: 14px; color: #333; margin-bottom: 8px; font-weight: 500; }
@@ -52,12 +52,12 @@ const doLogin = async () => {
   width: 100%; padding: 12px 14px; border: 1px solid #e0e0e0; border-radius: 10px;
   font-size: 15px; outline: none; box-sizing: border-box;
 }
-.input:focus { border-color: #ff4d4f; }
+.input:focus { border-color: #1D4ED8; }
 .hint { font-size: 11px; color: #aaa; margin: 8px 0 24px; }
 .btn {
-  background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: #fff;
+  background: linear-gradient(135deg, #3B82F6, #2563EB); color: #fff;
   text-align: center; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
 }
 .btn.disabled { opacity: 0.6; }
-.skip { text-align: center; margin-top: 20px; font-size: 13px; color: #ff4d4f; cursor: pointer; }
+.skip { text-align: center; margin-top: 20px; font-size: 13px; color: #1D4ED8; cursor: pointer; }
 </style>

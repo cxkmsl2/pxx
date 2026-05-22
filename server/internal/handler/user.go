@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strconv"
+
 	"pxx/internal/middleware"
 	"pxx/internal/service"
 	"pxx/pkg/response"
@@ -43,6 +45,13 @@ func (h *UserHandler) Profile(c *gin.Context) {
 		return
 	}
 	response.OK(c, user)
+}
+
+func (h *UserHandler) PublicProfile(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	user, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	if err != nil { response.Fail(c, 404, "用户不存在"); return }
+	response.OK(c, gin.H{"id": user.ID, "nickname": user.Nickname, "campus": user.Campus})
 }
 
 func (h *UserHandler) UpdateProfile(c *gin.Context) {

@@ -1,15 +1,16 @@
 <template>
   <div class="user">
     <div class="header">
-      <div class="avatar">😊</div>
+      <div class="avatar" @click="$router.push('/edit-profile')">😊</div>
       <div class="user-info">
-        <div class="nick">{{ store.userInfo?.nickname || '校园用户' }}</div>
+        <div class="nick" @click="$router.push('/edit-profile')">{{ store.userInfo?.nickname || '校园用户' }}</div>
         <div class="campus">{{ store.userInfo?.campus || '未认证' }}</div>
       </div>
       <div class="login-btn" v-if="!store.token" @click="$router.push('/login')">立即登录</div>
       <div class="login-btn" v-else @click="logout">退出</div>
     </div>
 
+    
     <div class="stats">
       <div class="stat"><b>0</b><span>收藏</span></div>
       <div class="stat"><b>0</b><span>浏览</span></div>
@@ -36,15 +37,19 @@
         <span>🔐 立即登录</span><span class="arrow">›</span>
       </div>
       <div class="menu-item" @click="$router.push('/published')">
+        <span>🔔 通知中心</span><span class="arrow">›</span>
+      </div>
+      <div class="menu-item" @click="$router.push('/published')">
         <span>📝 我发布的</span><span class="arrow">›</span>
       </div>
-      <div class="menu-item" @click="showMsg('功能开发中')">
+      <div class="menu-item" @click="$router.push('/favorites')">
         <span>⭐ 我的收藏</span><span class="arrow">›</span>
       </div>
-      <div class="menu-item" @click="showMsg('功能开发中')">
+      <div class="menu-item" @click="$router.push('/history')">
         <span>👁 浏览历史</span><span class="arrow">›</span>
       </div>
-      <div class="menu-item" @click="showMsg('功能开发中')">
+      <div class="menu-item" ><span>⚖️ 小法庭</span><span class="arrow">›</span></div>
+      <div class="menu-item" @click="$router.push('/settings')">
         <span>⚙️ 设置</span><span class="arrow">›</span>
       </div>
     </div>
@@ -62,15 +67,15 @@ const logout = () => {
   window.$toast('已退出')
 }
 
-const showMsg = (m: string) => alert(m)
+const showMsg = (m: string) => window.$toast(m)
 </script>
 
 <style scoped>
-.user { background: #f5f5f5; min-height: 100vh; }
+.user { background: #F8FAFC; min-height: 100vh; }
 
 .header {
   display: flex; align-items: center; gap: 12px;
-  padding: 24px 16px; background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  padding: 24px 16px; background: linear-gradient(135deg, #3B82F6, #2563EB);
   color: #fff;
 }
 .avatar {
@@ -94,8 +99,20 @@ const showMsg = (m: string) => alert(m)
 .menu-item {
   display: flex; justify-content: space-between; align-items: center;
   padding: 14px 16px; font-size: 14px; color: #333; cursor: pointer;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid #F8FAFC;
 }
 .menu-item:last-child { border-bottom: none; }
 .arrow { color: #ccc; font-size: 18px; }
+
+
+
+
+
+
+
+
+
+
+.cl-text { font-size: 15px; font-weight: 700; color: #059669; }
+.cl-score { font-size: 12px; color: #94a3b8; margin-top: 2px; }
 </style>

@@ -8,6 +8,15 @@
       </span>
     </div>
     <div class="form">
+      <div class="img-row">
+        <div class="img-box" v-for="(img,i) in images" :key="i" :style="{ backgroundImage: 'url('+img+')' }">
+          <span class="img-close" @click="images.splice(i,1)">✕</span>
+        </div>
+        <label class="img-add" v-if="images.length < 9">
+          <input type="file" accept="image/*" @change="onUpload" hidden />
+          <span>＋</span>
+        </label>
+      </div>
       <input v-model="form.title" placeholder="商品标题" class="input" />
       <textarea v-model="form.desc" placeholder="商品描述" class="textarea" rows="3"></textarea>
       <div class="row">
@@ -41,6 +50,7 @@ const route = useRoute()
 const store = useUserStore()
 const editId = Number(route.query.edit) || 0
 const submitting = ref(false)
+const images = ref<string[]>([])
 const priceYuan = ref('')
 const originalYuan = ref('')
 
@@ -64,6 +74,17 @@ onMounted(async () => {
   }
 })
 
+const onUpload = async (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const fd = new FormData(); fd.append('file', file)
+  try {
+    const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    if (res.code === 0) images.value.push(res.data.url)
+    else window.$toast('上传失败', 'error')
+  } catch { window.$toast('上传失败', 'error') }
+}
+
 const doSubmit = async () => {
   if (!store.token) { window.$toast('请先登录'); router.push('/login'); return }
   if (!form.value.title) { window.$toast('请输入标题'); return }
@@ -73,6 +94,7 @@ const doSubmit = async () => {
     const op = Number(originalYuan.value) || 0
     const data = {
       ...form.value,
+      images: JSON.stringify(images.value),
       price: Math.round(p * 100),
       original_price: Math.round(op * 100),
     }
@@ -89,11 +111,11 @@ const doSubmit = async () => {
 </script>
 
 <style scoped>
-.publish { background: #f5f5f5; min-height: 100vh; }
+.publish { background: #F8FAFC; min-height: 100vh; }
 .nav { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #fff; }
 .back { color: #333; font-size: 14px; cursor: pointer; }
 .title { font-size: 15px; font-weight: 600; }
-.submit { color: #ff4d4f; font-size: 14px; font-weight: 600; cursor: pointer; }
+.submit { color: #1D4ED8; font-size: 14px; font-weight: 600; cursor: pointer; }
 .submit.dim { opacity: 0.5; }
 .form { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .label-text { font-size: 13px; color: #666; font-weight: 500; margin: 4px 0 0; }
@@ -107,9 +129,14 @@ const doSubmit = async () => {
 .half { flex: 1; }
 .select { color: #333; }
 .btn {
-  background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: #fff;
+  background: linear-gradient(135deg, #3B82F6, #2563EB); color: #fff;
   text-align: center; padding: 14px; border-radius: 10px; font-size: 16px; font-weight: 600;
   cursor: pointer; margin-top: 12px;
 }
 .btn.dim { opacity: 0.6; }
+.img-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.img-box { width: 80px; height: 80px; border-radius: 10px; background-size: cover; background-position: center; position: relative; }
+.img-close { position: absolute; top: -4px; right: -4px; width: 18px; height: 18px; border-radius: 50%; background: #EF4444; color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.img-add { width: 80px; height: 80px; border: 2px dashed #CBD5E1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #CBD5E1; cursor: pointer; }
+
 </style>

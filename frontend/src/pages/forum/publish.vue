@@ -42,24 +42,24 @@ const doSubmit = async () => {
     if (res.code === 0) {
       window.$toast('发布成功！')
       router.push('/forum')
-    } else { alert(res.msg) }
+    } else { window.$toast(res.msg) }
   } catch { window.$toast('发布失败') }
   submitting.value = false
 }
 </script>
 
 <style scoped>
-.publish { background: #f5f5f5; min-height: 100vh; }
+.publish { background: #F8FAFC; min-height: 100vh; }
 .nav { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #fff; }
 .back { color: #333; font-size: 14px; cursor: pointer; }
 .title { font-size: 15px; font-weight: 600; }
-.submit { color: #ff4d4f; font-size: 14px; font-weight: 600; cursor: pointer; }
+.submit { color: #1D4ED8; font-size: 14px; font-weight: 600; cursor: pointer; }
 .submit.dim { opacity: 0.5; }
 
 .form { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .tabs { display: flex; gap: 10px; margin-bottom: 4px; }
 .tab { padding: 8px 20px; border-radius: 16px; font-size: 13px; background: #f0f0f0; color: #666; cursor: pointer; }
-.tab.active { background: #ff4d4f; color: #fff; }
+.tab.active { background: #1D4ED8; color: #fff; }
 
 .input, .textarea {
   width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px;
@@ -68,7 +68,7 @@ const doSubmit = async () => {
 .textarea { resize: vertical; min-height: 100px; }
 
 .btn {
-  background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: #fff;
+  background: linear-gradient(135deg, #3B82F6, #2563EB); color: #fff;
   text-align: center; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px;
 }
 .btn.dim { opacity: 0.6; }

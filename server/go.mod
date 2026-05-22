@@ -12,3 +12,7 @@ require (
 	gorm.io/driver/mysql v1.5.4
 	gorm.io/gorm v1.25.7
 )
+
+require github.com/gorilla/websocket v1.5.1
+
+require github.com/minio/minio-go/v7 v7.0.63

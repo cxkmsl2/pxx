@@ -15,7 +15,7 @@
             <span class="price">¥{{ (gb.price_per_unit / 100).toFixed(2) }}</span>
             <span class="unit">/件</span>
           </div>
-          <div class="people">已拼 {{ gb.current_people }}/{{ gb.min_people }} 人</div>
+          <div class="people">{{ gb.current_people >= gb.min_people ? '🎉 已满' : '已拼 '+gb.current_people+'/'+gb.min_people+' 人' }}</div>
           <div class="join-btn" @click="doJoin(gb.id)" v-if="gb.sold_count < gb.total_stock">参团</div>
           <div class="join-btn sold-out" v-else>售罄</div>
         </div>
@@ -62,7 +62,7 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-.page { background: #f5f5f5; min-height: 100vh; }
+.page { background: #F8FAFC; min-height: 100vh; }
 .nav { padding: 12px; background: #fff; font-size: 15px; font-weight: 600; }
 .loading, .empty { text-align: center; padding: 40px; color: #999; font-size: 13px; }
 
@@ -74,20 +74,20 @@ onMounted(() => loadData())
 .progress-bar {
   height: 6px; background: #f0f0f0; border-radius: 3px; margin: 10px 0; overflow: hidden;
 }
-.progress-fill { height: 100%; background: #ff4d4f; border-radius: 3px; transition: width 0.3s; }
+.progress-fill { height: 100%; background: #1D4ED8; border-radius: 3px; transition: width 0.3s; }
 
 .card-footer { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-.price { font-size: 20px; font-weight: 700; color: #ff4d4f; }
+.price { font-size: 20px; font-weight: 700; color: #1D4ED8; }
 .unit { font-size: 12px; color: #999; margin-left: 2px; }
 .people { font-size: 12px; color: #666; }
 .join-btn {
-  margin-left: auto; padding: 6px 16px; background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  margin-left: auto; padding: 6px 16px; background: linear-gradient(135deg, #3B82F6, #2563EB);
   color: #fff; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer;
 }
 .sold-out { background: #ccc; cursor: default; }
 
-.bg0 { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
-.bg1 { background: linear-gradient(135deg, #4834d4, #686de0); }
+.bg0 { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+.bg1 { background: linear-gradient(135deg, #1E40AF, #686de0); }
 .bg2 { background: linear-gradient(135deg, #22a6b3, #7ed6df); }
 .bg3 { background: linear-gradient(135deg, #f9ca24, #f0932b); }
 </style>

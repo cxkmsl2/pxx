@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"pxx/internal/cache"
@@ -41,6 +42,26 @@ func (s *RentalService) Detail(ctx context.Context, id uint) (*model.RentalItem,
 		return &ri, nil
 	})
 	return &item, err
+}
+
+
+func (s *RentalService) CreateOrderSimple(ctx context.Context, rentalID, userID uint, days int) (*model.RentalOrder, error) {
+	var item model.RentalItem
+	if err := s.db.WithContext(ctx).First(&item, rentalID).Error; err != nil {
+		return nil, fmt.Errorf("租赁物品不存在")
+	}
+	now := time.Now()
+	order := &model.RentalOrder{
+		RentalID:  rentalID,
+		RenterID:  userID,
+		StartDate: now,
+		EndDate:   now.Add(time.Duration(days) * 24 * time.Hour),
+		Status:    model.RentalStatusPending,
+	}
+	if err := s.db.WithContext(ctx).Create(order).Error; err != nil {
+		return nil, err
+	}
+	return order, nil
 }
 
 func (s *RentalService) CreateOrder(ctx context.Context, order *model.RentalOrder) error {

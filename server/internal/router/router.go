@@ -3,6 +3,7 @@ package router
 import (
 	"pxx/internal/handler"
 	"pxx/internal/middleware"
+	"pxx/internal/ws"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,8 +15,8 @@ func Setup(h *handler.Handlers) *gin.Engine {
 
 	api := g.Group("/api/v1")
 	{
-		// 公开接口
 		api.POST("/login", h.User.Login)
+		api.GET("/users/:id", h.User.PublicProfile)
 		api.GET("/products", h.Product.List)
 		api.GET("/products/:id", h.Product.Detail)
 		api.GET("/posts", h.Post.List)
@@ -25,40 +26,63 @@ func Setup(h *handler.Handlers) *gin.Engine {
 		api.GET("/rentals", h.Rental.List)
 		api.GET("/rentals/:id", h.Rental.Detail)
 		api.GET("/barters", h.Barter.List)
+		api.GET("/subscriptions", h.Subscription.List)
+		api.GET("/tasks", h.Task.List)
+		api.GET("/disputes", h.Dispute.List)
 
-		// 需要认证
 		auth := api.Group("", middleware.AuthRequired())
 		{
-			// 用户
 			auth.GET("/user/profile", h.User.Profile)
 			auth.PUT("/user/profile", h.User.UpdateProfile)
 
-			// 商品
 			auth.POST("/products", h.Product.Create)
 			auth.PUT("/products/:id", h.Product.Update)
 			auth.DELETE("/products/:id", h.Product.Delete)
 
-			// 订单
 			auth.POST("/orders", h.Order.Create)
 			auth.GET("/orders", h.Order.ListMy)
 			auth.PUT("/orders/:id/status", h.Order.UpdateStatus)
 
-			// 帖子
 			auth.POST("/posts", h.Post.Create)
 			auth.PUT("/posts/:id", h.Post.Update)
 
-			// 拼团
 			auth.POST("/groupbuys/:id/join", h.GroupBuy.Join)
 
-			// 租赁
 			auth.POST("/rentals/:id/order", h.Rental.CreateOrder)
 			auth.PUT("/rental-orders/:id/return", h.Rental.Return)
 
-			// 以物换物
 			auth.POST("/barters", h.Barter.Create)
 			auth.POST("/barters/:id/agree", h.Barter.Agree)
+
+			auth.POST("/subscriptions", h.Subscription.Create)
+			auth.POST("/subscriptions/:id/rent", h.Subscription.Rent)
+			auth.GET("/subscriptions/orders/:id/credential", h.Subscription.Credential)
+			auth.POST("/subscriptions/orders/:id/dispute", h.Subscription.Dispute)
+
+			auth.POST("/tasks", h.Task.Create)
+			auth.POST("/tasks/:id/take", h.Task.Take)
+			auth.POST("/tasks/:id/done", h.Task.Done)
+
+			auth.POST("/disputes", h.Dispute.Create)
+			auth.POST("/disputes/:id/vote", h.Dispute.Vote)
+			auth.POST("/disputes/:id/accept", h.Dispute.Accept)
+			auth.POST("/upload", handler.UploadImage)
+
+			auth.POST("/messages", h.Message.Send)
+			auth.GET("/messages/sys", h.Message.SysMessages)
+			auth.GET("/messages/conversations", h.Message.Conversations)
+			auth.GET("/messages/:user_id", h.Message.GetMessages)
+			auth.POST("/messages/read/:user_id", h.Message.MarkRead)
 		}
 	}
 
+	// WebSocket
+	wsGroup := g.Group("/api/v1/ws")
+	wsGroup.Use(middleware.AuthRequired())
+	wsGroup.GET("/connect", func(c *gin.Context) {
+		ws.HandleWS(c)
+	})
+
+	g.Static("/api/v1/uploads", "./static/uploads")
 	return g
 }
