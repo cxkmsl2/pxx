@@ -1,0 +1,40 @@
+-- PXX 账户服务数据库
+CREATE DATABASE IF NOT EXISTS pxx_account DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE pxx_account;
+
+-- 用户表（仅保留账户相关字段）
+CREATE TABLE IF NOT EXISTS users (
+    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    open_id     VARCHAR(64) NOT NULL DEFAULT '',
+    nickname    VARCHAR(64) NOT NULL DEFAULT '',
+    avatar      VARCHAR(512) NOT NULL DEFAULT '',
+    phone       VARCHAR(20) NOT NULL DEFAULT '',
+    campus      VARCHAR(64) NOT NULL DEFAULT '',
+    department  VARCHAR(64) NOT NULL DEFAULT '',
+    dormitory   VARCHAR(64) NOT NULL DEFAULT '',
+    is_verified TINYINT(1) NOT NULL DEFAULT 0,
+    balance     BIGINT NOT NULL DEFAULT 0,
+    credit      INT NOT NULL DEFAULT 60,
+    role        VARCHAR(20) NOT NULL DEFAULT 'user',
+    status      TINYINT NOT NULL DEFAULT 1,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_open_id (open_id),
+    INDEX idx_role (role)
+) ENGINE=InnoDB;
+
+-- TCC 控制表（防止悬挂/空回滚/幂等）
+CREATE TABLE IF NOT EXISTS tcc_logs (
+    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tx_id       VARCHAR(64) NOT NULL,
+    branch_id   BIGINT UNSIGNED NOT NULL,
+    action_type VARCHAR(16) NOT NULL COMMENT 'FREEZE/DEDUCT/UNFREEZE',
+    status      VARCHAR(16) NOT NULL COMMENT 'TRYING/FROZEN/CONFIRMED/CANCELLED/FAILED',
+    user_id     BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    amount      BIGINT NOT NULL DEFAULT 0,
+    payload     JSON,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_tx_branch (tx_id, branch_id),
+    INDEX idx_user (user_id)
+) ENGINE=InnoDB;

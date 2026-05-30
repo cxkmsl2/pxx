@@ -1,0 +1,67 @@
+syntax = "proto3";
+package trade;
+option go_package = "pxx/idl/gen/trade";
+
+service Trade {
+    // 创建订单（TCC 两阶段提交入口）
+    rpc CreateOrder(CreateOrderReq) returns (CreateOrderResp);
+    // 查询订单详情
+    rpc GetOrder(GetOrderReq) returns (GetOrderResp);
+    // 取消订单（由 Raft 调度器调用）
+    rpc CancelOrder(CancelOrderReq) returns (CancelOrderResp);
+    // 更新订单状态
+    rpc UpdateOrderStatus(UpdateOrderStatusReq) returns (UpdateOrderStatusResp);
+}
+
+// ============ CreateOrder ============
+message CreateOrderReq {
+    uint64 buyer_id = 1;
+    uint64 product_id = 2;
+    int64 amount = 3;
+}
+
+message CreateOrderResp {
+    string tx_id = 1;
+    uint64 order_id = 2;
+    int32 status = 3;           // 1:SUCCESS(已支付)  2:CLOSED(失败)
+    string msg = 4;
+}
+
+// ============ GetOrder ============
+message GetOrderReq {
+    uint64 order_id = 1;
+}
+
+message GetOrderResp {
+    uint64 id = 1;
+    string order_no = 2;
+    uint64 buyer_id = 3;
+    uint64 seller_id = 4;
+    uint64 product_id = 5;
+    int64 amount = 6;
+    int32 status = 7;
+    string tx_id = 8;
+    int64 created_at = 9;
+    int64 paid_at = 10;
+}
+
+// ============ CancelOrder ============
+message CancelOrderReq {
+    uint64 order_id = 1;
+    string reason = 2;
+}
+
+message CancelOrderResp {
+    bool success = 1;
+    string msg = 2;
+}
+
+// ============ UpdateOrderStatus ============
+message UpdateOrderStatusReq {
+    uint64 order_id = 1;
+    int32 status = 2;
+}
+
+message UpdateOrderStatusResp {
+    bool success = 1;
+}

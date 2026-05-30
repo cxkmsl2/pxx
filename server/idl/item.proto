@@ -1,0 +1,87 @@
+syntax = "proto3";
+package item;
+option go_package = "pxx/idl/gen/item";
+
+service Item {
+    // TCC Try 阶段：锁定库存
+    rpc TryLockStock(TryLockStockReq) returns (TryLockStockResp);
+    // TCC Confirm 阶段：确认扣减库存
+    rpc ConfirmDeductStock(ConfirmDeductStockReq) returns (ConfirmDeductStockResp);
+    // TCC Cancel 阶段：解锁库存
+    rpc CancelUnlockStock(CancelUnlockStockReq) returns (CancelUnlockStockResp);
+    // 查询商品详情
+    rpc GetProductDetail(GetProductDetailReq) returns (GetProductDetailResp);
+    // 批量查询商品
+    rpc ListProducts(ListProductsReq) returns (ListProductsResp);
+}
+
+// ============ TryLockStock ============
+message TryLockStockReq {
+    string tx_id = 1;
+    uint64 product_id = 2;
+    uint64 user_id = 3;      // 买家ID（记录）
+}
+
+message TryLockStockResp {
+    bool success = 1;
+    uint64 branch_id = 2;
+    string msg = 3;
+}
+
+// ============ ConfirmDeductStock ============
+message ConfirmDeductStockReq {
+    string tx_id = 1;
+    uint64 branch_id = 2;
+}
+
+message ConfirmDeductStockResp {
+    bool success = 1;
+    string msg = 2;
+}
+
+// ============ CancelUnlockStock ============
+message CancelUnlockStockReq {
+    string tx_id = 1;
+    uint64 branch_id = 2;
+}
+
+message CancelUnlockStockResp {
+    bool success = 1;
+    string msg = 2;
+}
+
+// ============ GetProductDetail ============
+message GetProductDetailReq {
+    uint64 product_id = 1;
+}
+
+message GetProductDetailResp {
+    uint64 id = 1;
+    uint64 seller_id = 2;
+    string title = 3;
+    string desc = 4;
+    string category = 5;
+    string tag = 6;
+    int64 price = 7;
+    int64 original_price = 8;
+    string images = 9;
+    string campus = 10;
+    int32 status = 11;
+    int32 stock = 12;
+    int64 created_at = 13;
+}
+
+// ============ ListProducts ============
+message ListProductsReq {
+    string category = 1;
+    string campus = 2;
+    string keyword = 3;
+    uint64 seller_id = 4;
+    int32 page = 5;
+    int32 page_size = 6;
+}
+
+message ListProductsResp {
+    repeated GetProductDetailResp items = 1;
+    int64 total = 2;
+}

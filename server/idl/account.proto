@@ -1,0 +1,87 @@
+syntax = "proto3";
+package account;
+option go_package = "pxx/idl/gen/account";
+
+service Account {
+    // TCC Try 阶段：冻结资金
+    rpc TryFreeze(TryFreezeReq) returns (TryFreezeResp);
+    // TCC Confirm 阶段：确认扣款
+    rpc ConfirmDeduct(ConfirmDeductReq) returns (ConfirmDeductResp);
+    // TCC Cancel 阶段：解冻资金
+    rpc CancelUnfreeze(CancelUnfreezeReq) returns (CancelUnfreezeResp);
+    // 查询用户信息（Gateway 拼接用）
+    rpc GetUserInfo(GetUserInfoReq) returns (GetUserInfoResp);
+    // 批量查询用户信息
+    rpc BatchGetUserInfo(BatchGetUserInfoReq) returns (BatchGetUserInfoResp);
+    // 查询余额
+    rpc GetBalance(GetBalanceReq) returns (GetBalanceResp);
+}
+
+// ============ TryFreeze ============
+message TryFreezeReq {
+    string tx_id = 1;
+    uint64 user_id = 2;
+    int64 amount = 3;        // 冻结金额（分），正数
+}
+
+message TryFreezeResp {
+    bool success = 1;
+    uint64 branch_id = 2;    // 分支事务ID
+    string msg = 3;
+}
+
+// ============ ConfirmDeduct ============
+message ConfirmDeductReq {
+    string tx_id = 1;
+    uint64 branch_id = 2;
+}
+
+message ConfirmDeductResp {
+    bool success = 1;
+    string msg = 2;
+}
+
+// ============ CancelUnfreeze ============
+message CancelUnfreezeReq {
+    string tx_id = 1;
+    uint64 branch_id = 2;
+}
+
+message CancelUnfreezeResp {
+    bool success = 1;
+    string msg = 2;
+}
+
+// ============ GetUserInfo ============
+message GetUserInfoReq {
+    uint64 user_id = 1;
+}
+
+message GetUserInfoResp {
+    uint64 id = 1;
+    string nickname = 2;
+    string avatar = 3;
+    string campus = 4;
+    string department = 5;
+    int32 credit = 6;
+    string role = 7;
+    int64 balance = 8;
+}
+
+// ============ BatchGetUserInfo ============
+message BatchGetUserInfoReq {
+    repeated uint64 user_ids = 1;
+}
+
+message BatchGetUserInfoResp {
+    repeated GetUserInfoResp users = 1;
+}
+
+// ============ GetBalance ============
+message GetBalanceReq {
+    uint64 user_id = 1;
+}
+
+message GetBalanceResp {
+    int64 balance = 1;
+}

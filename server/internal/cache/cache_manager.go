@@ -17,17 +17,17 @@ var (
 	NullTTL        = 60 * time.Second
 )
 
+// CacheManager 双层缓存：Redis → singleflight → DB
+// 已移除单机本地缓存层（local.go），仅依赖 Redis
 type CacheManager struct {
-	local  *LocalCache
-	sg     singleflight.Group
+	sg singleflight.Group
 }
 
 func NewCacheManager() *CacheManager {
-	return &CacheManager{local: GetLocalCache()}
+	return &CacheManager{}
 }
 
-// GetOrLoad 三层读取：local -> redis -> db
-// 使用 singleflight 防止缓存击穿
+// GetOrLoad 两层读取：redis -> singleflight -> db
 func (cm *CacheManager) GetOrLoad(
 	ctx context.Context,
 	key string,
@@ -35,24 +35,14 @@ func (cm *CacheManager) GetOrLoad(
 	redisTTL time.Duration,
 	loader func(context.Context) (interface{}, error),
 ) error {
-	// L2: 本地缓存
-	if val, ok := cm.local.Get(key); ok {
-		if s, isStr := val.(string); isStr && s == NullMarker {
-			return ErrNotFound
-		}
-		b, _ := json.Marshal(val)
-		return json.Unmarshal(b, dest)
-	}
-
-	// L3: Redis
+	// L1: Redis
 	if err := GetJSON(ctx, key, dest); err == nil {
-		cm.local.Set(key, dest, 5*time.Minute)
 		return nil
 	}
 
 	// singleflight 防击穿
 	v, err, _ := cm.sg.Do(key, func() (interface{}, error) {
-		// 二次检查 Redis
+		// 二次检查 Redis（double check）
 		var tmp interface{}
 		if err2 := GetJSON(ctx, key, &tmp); err2 == nil {
 			return tmp, nil
@@ -65,13 +55,17 @@ func (cm *CacheManager) GetOrLoad(
 		}
 		if val == nil {
 			// 缓存空值防穿透
-			if rdb != nil { _ = rdb.Set(ctx, key, NullMarker, NullTTL).Err() }
+			if rdb != nil {
+				_ = rdb.Set(ctx, key, NullMarker, NullTTL).Err()
+			}
 			return NullMarker, nil
 		}
 
 		// 回写 Redis，TTL 加随机偏移防雪崩
 		randTTL := redisTTL + time.Duration(rand.Int63n(int64(redisTTL/4)))
-		if rdb != nil { _ = SetJSON(ctx, key, val, randTTL) }
+		if rdb != nil {
+			_ = SetJSON(ctx, key, val, randTTL)
+		}
 		return val, nil
 	})
 
@@ -87,11 +81,9 @@ func (cm *CacheManager) GetOrLoad(
 	return json.Unmarshal(b, dest)
 }
 
-// Invalidate 删除所有层级缓存
+// Invalidate 删除 Redis 缓存
 func (cm *CacheManager) Invalidate(ctx context.Context, keys ...string) {
-	if cm.local == nil { return }
 	for _, key := range keys {
-		cm.local.Del(key)
 		_ = DelKey(ctx, key)
 	}
 }

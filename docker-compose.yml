@@ -1,76 +1,92 @@
 services:
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: pxx-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - server
-    networks:
-      - pxx-net
+  # ========== 基础设施 ==========
+  etcd:
+    image: gcr.io/etcd-development/etcd:v3.5.16
+    container_name: pxx-etcd
+    command: etcd --name etcd0 --listen-client-urls http://0.0.0.0:2379 --advertise-client-urls http://etcd:2379
+    ports: ["2379:2379"]
+    networks: [pxx-net]
 
-  server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    image: pxx-server
-    container_name: pxx-server
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=pxx
-      - DB_PASS=pxx123456
-      - DB_NAME=pxx
-      - REDIS_ADDR=redis:6379
-      - KAFKA_BROS=kafka:9092
-      - SERVER_PORT=8080
-      - JWT_SECRET=pxx-jwt-secret-2026
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - pxx-net
-
-  mysql:
+  mysql-account:
     image: mysql:8.0
-    container_name: pxx-mysql
-    restart: unless-stopped
+    container_name: pxx-mysql-account
     environment:
       MYSQL_ROOT_PASSWORD: root123456
-      MYSQL_DATABASE: pxx
-      MYSQL_USER: pxx
-      MYSQL_PASSWORD: pxx123456
-    ports:
-      - "3307:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+      MYSQL_DATABASE: pxx_account
+    ports: ["3311:3306"]
+    volumes: ["./sql/account.sql:/docker-entrypoint-initdb.d/init.sql:ro"]
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
       timeout: 3s
       retries: 10
-    networks:
-      - pxx-net
+    networks: [pxx-net]
+
+  mysql-trade:
+    image: mysql:8.0
+    container_name: pxx-mysql-trade
+    ports: ["3312:3306"]
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: pxx_trade
+    volumes: ["./sql/trade.sql:/docker-entrypoint-initdb.d/init.sql:ro"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [pxx-net]
+
+  mysql-item:
+    image: mysql:8.0
+    container_name: pxx-mysql-item
+    ports: ["3313:3306"]
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: pxx_item
+    volumes: ["./sql/item.sql:/docker-entrypoint-initdb.d/init.sql:ro"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [pxx-net]
+
+  mysql-feed:
+    image: mysql:8.0
+    container_name: pxx-mysql-feed
+    ports: ["3314:3306"]
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: pxx_feed
+    volumes: ["./sql/feed.sql:/docker-entrypoint-initdb.d/init.sql:ro"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [pxx-net]
+
+  mysql-legacy:
+    image: mysql:8.0
+    container_name: pxx-mysql-legacy
+    ports: ["3310:3306"]
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: pxx
+    volumes: ["./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [pxx-net]
 
   redis:
     image: redis:7-alpine
     container_name: pxx-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    networks:
-      - pxx-net
+    ports: ["6379:6379"]
+    networks: [pxx-net]
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -78,42 +94,199 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      - pxx-net
+    networks: [pxx-net]
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: pxx-kafka
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
+    depends_on: [zookeeper]
+    ports: ["9092:9092"]
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    networks:
-      - pxx-net
+    networks: [pxx-net]
 
   minio:
     image: minio/minio:latest
     container_name: pxx-minio
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    ports: ["9000:9000", "9001:9001"]
     environment:
       MINIO_ROOT_USER: pxxadmin
       MINIO_ROOT_PASSWORD: pxxminio123
     command: server /data --console-address ":9001"
-    volumes:
-      - minio-data:/data
-    networks:
-      - pxx-net
+    volumes: ["minio-data:/data"]
+    networks: [pxx-net]
+
+  # ========== 微服务 ==========
+  gateway-service:
+    build: { context: ./server, dockerfile: gateway/Dockerfile }
+    container_name: pxx-gateway
+    ports: ["9090:8080"]
+    environment:
+      - SERVER_PORT=8080
+      - DB_HOST=mysql-legacy
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASS=root123456
+      - DB_NAME=pxx
+      - REDIS_ADDR=redis:6379
+      - KAFKA_BROKERS=kafka:9092
+      - JWT_SECRET=pxx-jwt-secret-2026
+    depends_on:
+      mysql-legacy:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: on-failure
+    networks: [pxx-net]
+
+  account-service:
+    build: { context: ./server, dockerfile: account/Dockerfile }
+    container_name: pxx-account
+    ports: ["8081:8080"]
+    environment:
+      - SERVER_PORT=8080
+      - ETCD_ENDPOINTS=etcd:2379
+      - ACCOUNT_DB_HOST=mysql-account
+      - ACCOUNT_DB_PORT=3306
+      - ACCOUNT_DB_USER=root
+      - ACCOUNT_DB_PASS=root123456
+      - ACCOUNT_DB_NAME=pxx_account
+    depends_on:
+      mysql-account:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+    restart: on-failure
+    networks: [pxx-net]
+
+  trade-service:
+    build: { context: ./server, dockerfile: trade/Dockerfile }
+    container_name: pxx-trade
+    ports: ["8082:8080"]
+    environment:
+      - SERVER_PORT=8080
+      - ETCD_ENDPOINTS=etcd:2379
+      - TRADE_DB_HOST=mysql-trade
+      - TRADE_DB_PORT=3306
+      - TRADE_DB_USER=root
+      - TRADE_DB_PASS=root123456
+      - TRADE_DB_NAME=pxx_trade
+    depends_on:
+      mysql-trade:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+    restart: on-failure
+    networks: [pxx-net]
+
+  item-service:
+    build: { context: ./server, dockerfile: item/Dockerfile }
+    container_name: pxx-item
+    ports: ["8083:8080"]
+    environment:
+      - SERVER_PORT=8080
+      - ETCD_ENDPOINTS=etcd:2379
+      - ITEM_DB_HOST=mysql-item
+      - ITEM_DB_PORT=3306
+      - ITEM_DB_USER=root
+      - ITEM_DB_PASS=root123456
+      - ITEM_DB_NAME=pxx_item
+    depends_on:
+      mysql-item:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+    restart: on-failure
+    networks: [pxx-net]
+
+  feed-service:
+    build: { context: ./server, dockerfile: feed/Dockerfile }
+    container_name: pxx-feed
+    ports: ["8084:8080"]
+    environment:
+      - SERVER_PORT=8080
+      - ETCD_ENDPOINTS=etcd:2379
+      - FEED_DB_HOST=mysql-feed
+      - FEED_DB_PORT=3306
+      - FEED_DB_USER=root
+      - FEED_DB_PASS=root123456
+      - FEED_DB_NAME=pxx_feed
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      mysql-feed:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+    restart: on-failure
+    networks: [pxx-net]
+
+  raft-scheduler-1:
+    build: { context: ./server, dockerfile: raft-scheduler/Dockerfile }
+    container_name: pxx-raft-1
+    environment:
+      - RAFT_NODE_ID=scheduler-1
+      - RAFT_DATA_DIR=/data/raft
+      - RAFT_BIND_ADDR=0.0.0.0:7000
+      - RAFT_BOOTSTRAP=true
+      - TRADE_SERVICE_ADDR=trade-service:8080
+    volumes: ["raft-data-1:/data/raft"]
+    ports: ["7000:7000"]
+    depends_on: [trade-service]
+    networks: [pxx-net]
+
+  raft-scheduler-2:
+    build: { context: ./server, dockerfile: raft-scheduler/Dockerfile }
+    container_name: pxx-raft-2
+    environment:
+      - RAFT_NODE_ID=scheduler-2
+      - RAFT_DATA_DIR=/data/raft
+      - RAFT_BIND_ADDR=0.0.0.0:7001
+      - RAFT_JOIN_ADDR=raft-scheduler-1:7000
+      - TRADE_SERVICE_ADDR=trade-service:8080
+    volumes: ["raft-data-2:/data/raft"]
+    ports: ["7001:7001"]
+    depends_on: [raft-scheduler-1]
+    networks: [pxx-net]
+
+  raft-scheduler-3:
+    build: { context: ./server, dockerfile: raft-scheduler/Dockerfile }
+    container_name: pxx-raft-3
+    environment:
+      - RAFT_NODE_ID=scheduler-3
+      - RAFT_DATA_DIR=/data/raft
+      - RAFT_BIND_ADDR=0.0.0.0:7002
+      - RAFT_JOIN_ADDR=raft-scheduler-1:7000
+      - TRADE_SERVICE_ADDR=trade-service:8080
+    volumes: ["raft-data-3:/data/raft"]
+    ports: ["7002:7002"]
+    depends_on: [raft-scheduler-1]
+    networks: [pxx-net]
+
+  # 前端 Nginx（可选）
+  frontend:
+    build: { context: ./frontend, dockerfile: Dockerfile }
+    container_name: pxx-frontend
+    ports: ["3000:80"]
+    depends_on: [gateway-service]
+    networks: [pxx-net]
+
+  # 反向代理 Nginx
+  nginx:
+    build: { context: ./nginx, dockerfile: Dockerfile }
+    container_name: pxx-nginx
+    restart: unless-stopped
+    ports: ["80:80"]
+    depends_on: [gateway-service, frontend]
+    networks: [pxx-net]
 
 volumes:
-  mysql-data:
   minio-data:
+  raft-data-1:
+  raft-data-2:
+  raft-data-3:
 
 networks:
   pxx-net:
