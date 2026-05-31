@@ -48,15 +48,29 @@ const finished = ref(false)
 let page = 1
 
 const cats = [
-  { icon: '🔄', text: '以物换物', to: '/barter' },
-  { icon: '🏃', text: '微跑腿', to: '/tasks' },
+  { icon: '🔄', text: '置换', to: '/barter' },
+  { icon: '🏃', text: '跑腿', to: '/tasks' },
   { icon: '📦', text: '拼团', to: '/groupbuy' },
   { icon: '⏰', text: '租赁', to: '/rental' },
   { icon: '🎫', text: '拼卡', to: '/subscription' },
   { icon: '💬', text: '论坛', to: '/forum' },
+  { icon: '⚖️', text: '法庭', to: '/tribunal' },
 ]
 
-const getImg = (item: any) => { if (item.images) { try { const imgs = JSON.parse(item.images); return imgs[0] ? 'url(' + imgs[0] + ')' : null } catch {} } return null }
+const getImg = (item: any) => { 
+  if (item.images && typeof item.images === 'string' && item.images !== '') { 
+    try { 
+      const imgs = JSON.parse(item.images); 
+      if (Array.isArray(imgs) && imgs.length > 0) {
+        return 'url(' + imgs[0] + ')';
+      }
+    } catch (e) {
+      console.error("Image parse error:", e);
+    }
+  } 
+  return ''; 
+}
+
 const pct = ref(50)
 
 const fetchData = async () => {

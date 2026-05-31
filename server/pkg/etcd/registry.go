@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -129,4 +130,110 @@ func (r *Resolver) ListEndpoints(ctx context.Context) ([]string, error) {
 
 func (r *Resolver) Close() error {
 	return r.cli.Close()
+}
+
+// ============================ 连接池化 ServiceResolver ============================
+
+// ServiceResolver 持久的服务发现器：复用 ETCD 长连接，round-robin 负载均衡
+type ServiceResolver struct {
+	cli        *clientv3.Client
+	serviceName string
+	endpoints  []string
+	nextIdx    int
+	mu         sync.Mutex
+	refreshInterval time.Duration
+}
+
+// NewServiceResolver 创建持久的服务发现器
+func NewServiceResolver(etcdEndpoints []string, serviceName string) (*ServiceResolver, error) {
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   etcdEndpoints,
+		DialTimeout: 5 * time.Second,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("etcd connect: %w", err)
+	}
+
+	sr := &ServiceResolver{
+		cli:             cli,
+		serviceName:     serviceName,
+		refreshInterval: 15 * time.Second,
+	}
+
+	// 首次加载
+	if err := sr.refresh(context.Background()); err != nil {
+		cli.Close()
+		return nil, fmt.Errorf("initial refresh: %w", err)
+	}
+
+	// 后台定期刷新
+	go sr.refreshLoop()
+
+	log.Printf("[Etcd] ServiceResolver ready for %s (%d endpoints)", serviceName, len(sr.endpoints))
+	return sr, nil
+}
+
+// refresh 从 ETCD 获取最新端点列表
+func (sr *ServiceResolver) refresh(ctx context.Context) error {
+	manager, err := endpoints.NewManager(sr.cli, sr.serviceName)
+	if err != nil {
+		return err
+	}
+	eps, err := manager.List(ctx)
+	if err != nil {
+		return err
+	}
+
+	addrs := make([]string, 0, len(eps))
+	for _, ep := range eps {
+		addrs = append(addrs, ep.Addr)
+	}
+
+	sr.mu.Lock()
+	sr.endpoints = addrs
+	// 重置索引避免越界
+	if sr.nextIdx >= len(addrs) {
+		sr.nextIdx = 0
+	}
+	sr.mu.Unlock()
+	return nil
+}
+
+// refreshLoop 定期刷新端点列表
+func (sr *ServiceResolver) refreshLoop() {
+	ticker := time.NewTicker(sr.refreshInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		if err := sr.refresh(context.Background()); err != nil {
+			log.Printf("[Etcd] refresh %s failed: %v", sr.serviceName, err)
+		}
+	}
+}
+
+// GetEndpoint 获取一个端点地址（round-robin）
+func (sr *ServiceResolver) GetEndpoint() (string, error) {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+
+	if len(sr.endpoints) == 0 {
+		return "", fmt.Errorf("no endpoints for %s", sr.serviceName)
+	}
+
+	addr := sr.endpoints[sr.nextIdx]
+	sr.nextIdx = (sr.nextIdx + 1) % len(sr.endpoints)
+	return addr, nil
+}
+
+// GetAllEndpoints 获取所有端点（用于首次连接之前的轮询）
+func (sr *ServiceResolver) GetAllEndpoints() []string {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	cp := make([]string, len(sr.endpoints))
+	copy(cp, sr.endpoints)
+	return cp
+}
+
+// Close 关闭连接
+func (sr *ServiceResolver) Close() error {
+	return sr.cli.Close()
 }

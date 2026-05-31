@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
 
 	"pxx/internal/middleware"
@@ -11,14 +12,17 @@ import (
 )
 
 type OrderHandler struct {
-	svc *service.OrderService
+	svc    *service.OrderService
+	Create func(c *gin.Context)
 }
 
 func NewOrderHandler(svc *service.OrderService) *OrderHandler {
-	return &OrderHandler{svc: svc}
+	h := &OrderHandler{svc: svc}
+	h.Create = h.create
+	return h
 }
 
-func (h *OrderHandler) Create(c *gin.Context) {
+func (h *OrderHandler) create(c *gin.Context) {
 	var req struct {
 		ProductID uint `json:"product_id" binding:"required"`
 	}
@@ -37,6 +41,7 @@ func (h *OrderHandler) Create(c *gin.Context) {
 
 func (h *OrderHandler) ListMy(c *gin.Context) {
 	userID := middleware.GetUserID(c)
+	fmt.Printf("[DEBUG] ListMy called for userID: %d\n", userID)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	orders, total, err := h.svc.ListMy(c.Request.Context(), userID, page, pageSize)
@@ -44,6 +49,7 @@ func (h *OrderHandler) ListMy(c *gin.Context) {
 		response.Error(c, err.Error())
 		return
 	}
+	fmt.Printf("[DEBUG] ListMy found %d orders\n", total)
 	response.OK(c, gin.H{"total": total, "items": orders})
 }
 

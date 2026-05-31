@@ -6,7 +6,8 @@ import "time"
 type TccTransaction struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	TxID      string    `gorm:"size:64;uniqueIndex" json:"tx_id"`
-	Status    string    `gorm:"size:16;default:TRYING" json:"status"` // TRYING / CONFIRMED / CANCELLED
+	Status    string    `gorm:"size:16;default:TRYING" json:"status"` // TRYING / CONFIRMING / CONFIRMED / CANCELLING / CANCELLED
+	Payload   string    `gorm:"type:json" json:"payload"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

@@ -23,6 +23,9 @@ func InitBloomFilter(size uint32, hashCnt uint32) {
 }
 
 func GetBloomFilter() *BloomFilter {
+	if bloom == nil {
+		InitBloomFilter(1000000, 3)
+	}
 	return bloom
 }
 

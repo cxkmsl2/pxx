@@ -11,7 +11,8 @@ import (
 )
 
 type MessageHandler struct {
-	svc *service.MessageService
+	svc         *service.MessageService
+	UserService *service.UserService
 }
 
 func NewMessageHandler(svc *service.MessageService) *MessageHandler {

@@ -1,1 +1,0 @@
-import{g as s}from"./index-DVrmXrOz.js";const o=s("user",{state:()=>({token:"",userInfo:null}),actions:{setToken(e){this.token=e},setUserInfo(e){this.userInfo=e},logout(){this.token="",this.userInfo=null}}});export{o as u};

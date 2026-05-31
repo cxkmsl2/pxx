@@ -14,7 +14,6 @@ import (
 )
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
-var jwtSecret = []byte("pxx-jwt-secret-2026")
 
 type Client struct {
 	UserID uint
@@ -45,14 +44,19 @@ func (h *Hub) run() {
 		select {
 		case client := <-h.register:
 			h.mu.Lock()
+			// 如果该用户已有连接，先关掉旧的
+			if old, ok := h.clients[client.UserID]; ok {
+				old.Conn.Close()
+				// 这里不调 close(old.Send)，让 writePump 自然退出
+			}
 			h.clients[client.UserID] = client
 			h.mu.Unlock()
 			log.Printf("[WS] user %d connected", client.UserID)
 		case client := <-h.unregister:
 			h.mu.Lock()
-			if c, ok := h.clients[client.UserID]; ok {
-				close(c.Send)
+			if c, ok := h.clients[client.UserID]; ok && c == client {
 				delete(h.clients, client.UserID)
+				close(c.Send)
 			}
 			h.mu.Unlock()
 			log.Printf("[WS] user %d disconnected", client.UserID)
@@ -62,12 +66,16 @@ func (h *Hub) run() {
 
 func (h *Hub) SendToUser(userID uint, msg interface{}) {
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-	if client, ok := h.clients[userID]; ok {
+	client, ok := h.clients[userID]
+	h.mu.RUnlock()
+
+	if ok {
 		data, _ := json.Marshal(msg)
+		// 非阻塞发送，防止慢客户端阻塞 Hub
 		select {
 		case client.Send <- data:
 		default:
+			log.Printf("[WS] user %d send buffer full, dropping message", userID)
 		}
 	}
 }
@@ -87,7 +95,7 @@ func HandleWS(c *gin.Context) {
 		if tokenStr != "" {
 			claims := &middleware.Claims{}
 			token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
-				return jwtSecret, nil
+				return middleware.GetJWTSecret(), nil
 			})
 			if err == nil && token.Valid {
 				userID = claims.UserID
@@ -100,21 +108,33 @@ func HandleWS(c *gin.Context) {
 	}
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil { return }
-	client := &Client{UserID: userID, Conn: conn, Send: make(chan []byte, 64)}
+
+	client := &Client{UserID: userID, Conn: conn, Send: make(chan []byte, 256)}
 	DefaultHub.register <- client
 
-	go func() {
-		defer func() { DefaultHub.unregister <- client; conn.Close() }()
-		for {
-			_, msg, err := conn.ReadMessage()
-			if err != nil { break }
-			// Echo for now; real processing in service layer
-			log.Printf("[WS] received from %d: %s", userID, string(msg))
-		}
+	// 启动读写循环
+	go client.writePump()
+	go client.readPump()
+}
+
+func (c *Client) readPump() {
+	defer func() {
+		DefaultHub.unregister <- c
+		c.Conn.Close()
 	}()
-	go func() {
-		for msg := range client.Send {
-			conn.WriteMessage(websocket.TextMessage, msg)
+	for {
+		_, _, err := c.Conn.ReadMessage()
+		if err != nil {
+			break
 		}
-	}()
+	}
+}
+
+func (c *Client) writePump() {
+	defer c.Conn.Close()
+	for msg := range c.Send {
+		if err := c.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			break
+		}
+	}
 }

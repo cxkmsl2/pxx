@@ -13,11 +13,18 @@ func Setup(h *handler.Handlers) *gin.Engine {
 	g.Use(gin.Logger(), gin.Recovery())
 	g.Use(middleware.CORS())
 
+	// 健康检查端点（供 Docker healthcheck）
+	g.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
 	api := g.Group("/api/v1")
 	{
 		api.POST("/login", h.User.Login)
 		api.GET("/users/:id", h.User.PublicProfile)
-		api.GET("/products", h.Product.List)
+		if h.Product.List != nil {
+			api.GET("/products", h.Product.List)
+		}
 		api.GET("/products/:id", h.Product.Detail)
 		api.GET("/posts", h.Post.List)
 		api.GET("/posts/:id", h.Post.Detail)
@@ -39,7 +46,10 @@ func Setup(h *handler.Handlers) *gin.Engine {
 			auth.PUT("/products/:id", h.Product.Update)
 			auth.DELETE("/products/:id", h.Product.Delete)
 
-			auth.POST("/orders", h.Order.Create)
+			// 只有在 Create 为空时才注册（或者直接信任传入的 h.Order.Create）
+			if h.Order.Create != nil {
+				auth.POST("/orders", h.Order.Create)
+			}
 			auth.GET("/orders", h.Order.ListMy)
 			auth.PUT("/orders/:id/status", h.Order.UpdateStatus)
 

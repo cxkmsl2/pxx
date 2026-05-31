@@ -17,7 +17,7 @@ type RentalItem struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
-	Owner *User `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
+	Owner *User `gorm:"-" json:"owner,omitempty"` // 跨库不可 Preload，由业务层单独查询填充
 }
 
 func (RentalItem) TableName() string { return "rental_items" }

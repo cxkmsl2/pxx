@@ -33,20 +33,26 @@ func (s *PostService) List(ctx context.Context, ptype int8, tag string, page, pa
 		query = query.Where("tags LIKE ?", "%"+tag+"%")
 	}
 	query.Count(&total)
-	query.Preload("User").Preload("Product").Order("created_at DESC").Offset(offset).Limit(limit).Find(&posts)
+	query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&posts)
 	return posts, total, nil
 }
 
 func (s *PostService) Detail(ctx context.Context, id uint) (*model.Post, error) {
+	// 先查存在性，再更新浏览量
+	var exists int64
+	s.db.WithContext(ctx).Model(&model.Post{}).Where("id = ?", id).Count(&exists)
+	if exists > 0 {
+		s.db.WithContext(ctx).Model(&model.Post{}).Where("id = ?", id).
+			UpdateColumn("view_count", gorm.Expr("view_count + 1"))
+	}
+
 	key := cache.BuildKey("post", id)
 	var p model.Post
 	err := s.cache.GetOrLoad(ctx, key, &p, 15*time.Minute, func(ctx context.Context) (interface{}, error) {
 		var post model.Post
-		if err := s.db.WithContext(ctx).Preload("User").Preload("Product").First(&post, id).Error; err != nil {
+		if err := s.db.WithContext(ctx).First(&post, id).Error; err != nil {
 			return nil, err
 		}
-		s.db.WithContext(ctx).Model(&model.Post{}).Where("id = ?", id).
-			UpdateColumn("view_count", gorm.Expr("view_count + 1"))
 		return &post, nil
 	})
 	return &p, err

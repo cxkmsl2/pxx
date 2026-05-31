@@ -15,6 +15,10 @@ func InitAuth(secret string) {
 	jwtSecret = []byte(secret)
 }
 
+func GetJWTSecret() []byte {
+	return jwtSecret
+}
+
 type Claims struct {
 	UserID uint   `json:"user_id"`
 	Role   string `json:"role"`

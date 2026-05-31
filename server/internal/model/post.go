@@ -17,8 +17,8 @@ type Post struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	User    *User    `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Product *Product `gorm:"foreignKey:ProductID" json:"product,omitempty"`
+	User    *User    `gorm:"-" json:"user,omitempty"`    // 跨库不可 Preload
+	Product *Product `gorm:"-" json:"product,omitempty"` // 跨库不可 Preload
 }
 
 func (Post) TableName() string { return "posts" }

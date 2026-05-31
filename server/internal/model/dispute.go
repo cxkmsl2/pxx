@@ -23,8 +23,8 @@ type DisputeCase struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 
-	Plaintiff *User `gorm:"foreignKey:PlaintiffID" json:"plaintiff,omitempty"`
-	Defendant *User `gorm:"foreignKey:DefendantID" json:"defendant,omitempty"`
+	Plaintiff *User `gorm:"-" json:"plaintiff,omitempty"` // 跨库不可 Preload
+	Defendant *User `gorm:"-" json:"defendant,omitempty"` // 跨库不可 Preload
 }
 
 func (DisputeCase) TableName() string { return "dispute_cases" }

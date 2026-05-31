@@ -11,6 +11,20 @@ service Trade {
     rpc CancelOrder(CancelOrderReq) returns (CancelOrderResp);
     // 更新订单状态
     rpc UpdateOrderStatus(UpdateOrderStatusReq) returns (UpdateOrderStatusResp);
+    // 查询我的订单列表
+    rpc ListOrders(ListOrdersReq) returns (ListOrdersResp);
+}
+
+// ============ ListOrders ============
+message ListOrdersReq {
+    uint64 user_id = 1;
+    int32 page = 2;
+    int32 page_size = 3;
+}
+
+message ListOrdersResp {
+    repeated GetOrderResp items = 1;
+    int64 total = 2;
 }
 
 // ============ CreateOrder ============

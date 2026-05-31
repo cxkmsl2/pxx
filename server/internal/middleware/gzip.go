@@ -14,8 +14,10 @@ func Gzip() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		c.Writer = &gzipWriter{ResponseWriter: c.Writer, Writer: gzip.NewWriter(c.Writer)}
+		gw := gzip.NewWriter(c.Writer)
+		c.Writer = &gzipWriter{ResponseWriter: c.Writer, Writer: gw}
 		c.Header("Content-Encoding", "gzip")
+		defer gw.Close()
 		c.Next()
 	}
 }

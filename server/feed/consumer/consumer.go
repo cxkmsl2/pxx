@@ -5,39 +5,19 @@ import (
 	"log"
 
 	"pxx/feed/service"
-
-	"github.com/segmentio/kafka-go"
+	"pxx/internal/mq"
 )
 
 // StartFeedConsumer 启动 Feed 流 Kafka 消费者
-// 消费 pxx.feed.event 主题，批量写库
-func StartFeedConsumer(brokers string, svc *service.PostService) {
-	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:   []string{brokers},
-		Topic:     "pxx.feed.event",
-		GroupID:   "pxx-feed-consumer",
-		MinBytes:  10e3,
-		MaxBytes:  10e6,
-	})
-
-	go func() {
-		defer reader.Close()
-		log.Println("[FeedConsumer] started, consuming pxx.feed.event")
-
-		for {
-			msg, err := reader.ReadMessage(context.Background())
-			if err != nil {
-				log.Printf("[FeedConsumer] read error: %v", err)
-				continue
-			}
-
-			if err := svc.ProcessEvent(msg.Value); err != nil {
-				log.Printf("[FeedConsumer] process error: %v", err)
-			} else {
-				log.Printf("[FeedConsumer] processed event: %s", string(msg.Value[:min(len(msg.Value), 100)]))
-			}
+func StartFeedConsumer(ctx context.Context, brokers string, svc *service.PostService) {
+	mq.StartConsumer(ctx, brokers, mq.TopicFeedEvent, "pxx-feed-consumer", func(data []byte) error {
+		if err := svc.ProcessEvent(data); err != nil {
+			log.Printf("[FeedConsumer] process error: %v", err)
+			return err
 		}
-	}()
+		log.Printf("[FeedConsumer] processed event: %s", string(data[:min(len(data), 100)]))
+		return nil
+	})
 }
 
 func min(a, b int) int {

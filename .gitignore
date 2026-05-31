@@ -1,0 +1,28 @@
+# Go 编译产物
+*.exe
+*.test
+*.out
+
+# 特定编译产物
+server/raft-scheduler/raft-scheduler
+server/gateway-service
+server/account-service
+server/item-service
+server/trade-service
+server/raft-bin
+server/gateway.exe
+server/trade.exe
+server/raft.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+data/

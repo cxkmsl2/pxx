@@ -62,13 +62,6 @@ func (s *GroupBuyService) Join(ctx context.Context, groupBuyID, userID uint, qua
 		return fmt.Errorf("库存不足，仅剩 %d 件", gb.TotalStock-gb.SoldCount)
 	}
 
-	var existingCount int64
-	s.db.WithContext(ctx).Model(&model.GroupBuyOrder{}).
-		Where("group_buy_id = ? AND user_id = ?", groupBuyID, userID).Count(&existingCount)
-	if existingCount > 0 {
-		return fmt.Errorf("你已参与此拼团")
-	}
-
 	order := &model.GroupBuyOrder{
 		GroupBuyID: groupBuyID,
 		UserID:     userID,
@@ -79,13 +72,27 @@ func (s *GroupBuyService) Join(ctx context.Context, groupBuyID, userID uint, qua
 	}
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(order).Error; err != nil {
-			return err
+		// 检查是否已参与
+		var existingCount int64
+		tx.Model(&model.GroupBuyOrder{}).
+			Where("group_buy_id = ? AND user_id = ?", groupBuyID, userID).Count(&existingCount)
+		if existingCount > 0 {
+			return fmt.Errorf("你已参与此拼团")
 		}
-		return tx.Model(&model.GroupBuy{}).Where("id = ?", groupBuyID).Updates(map[string]interface{}{
-			"current_people": gorm.Expr("current_people + 1"),
-			"sold_count":     gorm.Expr("sold_count + ?", quantity),
-		}).Error
+
+		// 乐观锁/条件更新：检查库存并扣减
+		result := tx.Model(&model.GroupBuy{}).
+			Where("id = ? AND status = ? AND sold_count + ? <= total_stock", groupBuyID, model.GroupBuyStatusActive, quantity).
+			Updates(map[string]interface{}{
+				"current_people": gorm.Expr("current_people + 1"),
+				"sold_count":     gorm.Expr("sold_count + ?", quantity),
+			})
+
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("库存不足或拼团已结束")
+		}
+
+		return tx.Create(order).Error
 	})
 
 	if err == nil {

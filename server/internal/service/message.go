@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"sort"
 	"time"
 
@@ -13,10 +15,14 @@ import (
 )
 
 type MessageService struct {
-	db *gorm.DB
+	db          *gorm.DB
+	UserService *UserService
 }
 
 func NewMessageService(db *gorm.DB) *MessageService {
+	if db == nil {
+		log.Fatal("[ERROR] NewMessageService called with nil db")
+	}
 	return &MessageService{db: db}
 }
 
@@ -61,19 +67,25 @@ func (s *MessageService) MarkRead(ctx context.Context, userID, fromUserID uint) 
 	return s.db.WithContext(ctx).Model(&model.Message{}).Where("to_user_id = ? AND from_user_id = ? AND read_at IS NULL", userID, fromUserID).Update("read_at", &now).Error
 }
 
-
-
-
 func (s *MessageService) GetConversations(ctx context.Context, userID uint) ([]ConversationResult, error) {
+	log.Printf("[DEBUG] GetConversations called for userID: %d", userID)
+	if s.db == nil {
+		log.Printf("[ERROR] MessageService db is nil")
+		return nil, fmt.Errorf("db is nil")
+	}
 	var msgs []model.Message
-	s.db.WithContext(ctx).
+	err := s.db.WithContext(ctx).
 		Where("from_user_id = ? OR to_user_id = ?", userID, userID).
-		Order("created_at DESC").Limit(200).Find(&msgs)
+		Order("created_at DESC").Limit(500).Find(&msgs).Error
+	if err != nil {
+		log.Printf("[ERROR] GetConversations query failed: %v", err)
+		return nil, err
+	}
+	log.Printf("[DEBUG] GetConversations found %d messages", len(msgs))
 
 	// Group by peer in memory
 	type peerData struct {
 		userID   uint
-		nickname string
 		lastMsg  string
 		lastTime time.Time
 		unread   int
@@ -102,14 +114,18 @@ func (s *MessageService) GetConversations(ctx context.Context, userID uint) ([]C
 		}
 	}
 
-	// Fetch nicknames
+	// Fetch nicknames using UserService
 	result := make([]ConversationResult, 0, len(peerOrder))
 	for _, pid := range peerOrder {
 		pd := peerMap[pid]
-		var user model.User
-		s.db.WithContext(ctx).Select("nickname").First(&user, pid)
+		nickname := "未知用户"
+		if s.UserService != nil {
+			if user, err := s.UserService.GetByID(ctx, pid); err == nil {
+				nickname = user.Nickname
+			}
+		}
 		result = append(result, ConversationResult{
-			UserID: pd.userID, Nickname: user.Nickname,
+			UserID: pd.userID, Nickname: nickname,
 			LastMsg: pd.lastMsg, LastTime: pd.lastTime, Unread: pd.unread,
 		})
 	}

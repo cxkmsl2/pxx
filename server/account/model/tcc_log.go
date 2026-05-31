@@ -11,8 +11,8 @@ type TCCLog struct {
 	Status     string    `gorm:"size:16" json:"status"`       // TRYING / FROZEN / CONFIRMED / CANCELLED / FAILED
 	UserID     uint64    `gorm:"default:0" json:"user_id"`
 	Amount     int64     `gorm:"default:0" json:"amount"`
-	Payload    string    `gorm:"type:json" json:"payload"`
-	CreatedAt  time.Time `json:"created_at"`
+	Payload    string    `gorm:"type:json;default:'{}'" json:"payload"`
+	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 

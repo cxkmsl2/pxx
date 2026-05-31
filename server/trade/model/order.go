@@ -10,7 +10,7 @@ type Order struct {
 	ProductID   uint       `json:"product_id"`
 	Amount      int64      `json:"amount"`
 	Status      int8       `gorm:"default:1" json:"status"`
-	TxID        string     `gorm:"size:64;default:''" json:"tx_id"`
+	TxID        string     `gorm:"size:64;uniqueIndex" json:"tx_id"`
 	PayMethod   string     `gorm:"size:16" json:"pay_method"`
 	PaidAt      *time.Time `json:"paid_at,omitempty"`
 	DeliveredAt *time.Time `json:"delivered_at,omitempty"`

@@ -13,8 +13,9 @@ import (
 )
 
 type SubscriptionService struct {
-	db    *gorm.DB
-	cache *cache.CacheManager
+	db          *gorm.DB
+	cache       *cache.CacheManager
+	UserService *UserService
 }
 
 func NewSubscriptionService(db *gorm.DB, cm *cache.CacheManager) *SubscriptionService {
@@ -29,7 +30,17 @@ func (s *SubscriptionService) List(ctx context.Context, brand string, page, page
 	if brand != "" {
 		query = query.Where("brand = ?", brand)
 	}
-	query.Count(&total).Order("created_at DESC").Offset(offset).Limit(limit).Preload("Owner").Find(&items)
+	// Removed Preload("Owner")
+	query.Count(&total).Order("created_at DESC").Offset(offset).Limit(limit).Find(&items)
+	
+	if s.UserService != nil {
+		for i := range items {
+			if owner, err := s.UserService.GetByID(ctx, items[i].OwnerID); err == nil {
+				items[i].Owner = owner
+			}
+		}
+	}
+	
 	return items, total, nil
 }
 
@@ -81,14 +92,22 @@ func (s *SubscriptionService) Rent(ctx context.Context, subID, buyerID uint, day
 	}
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(order).Error; err != nil { return err }
-		return tx.Model(&model.Subscription{}).Where("id = ? AND status = ?", subID, model.SubStatusAvailable).
+		// 1. 原子更新状态，确保只会被租用一次
+		result := tx.Model(&model.Subscription{}).
+			Where("id = ? AND status = ?", subID, model.SubStatusAvailable).
 			Updates(map[string]interface{}{
 				"status":    model.SubStatusInUse,
 				"rented_by": buyerID,
 				"rent_start": now,
 				"rent_end":   endAt,
-			}).Error
+			})
+		
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("该卡已被租用或已失效")
+		}
+
+		// 2. 创建订单
+		return tx.Create(order).Error
 	})
 	return order, err
 }
@@ -101,8 +120,11 @@ func (s *SubscriptionService) GetCredential(ctx context.Context, orderID, userID
 	if order.BuyerID != userID {
 		return "", "", time.Time{}, fmt.Errorf("无权查看")
 	}
-	if time.Now().After(*order.Subscription.RentEnd) {
-		return "", "", time.Time{}, fmt.Errorf("已过期")
+	if order.Status != 1 { // 1=Paid/Active
+		return "", "", time.Time{}, fmt.Errorf("订单状态异常")
+	}
+	if order.Subscription == nil || order.Subscription.RentEnd == nil || time.Now().After(*order.Subscription.RentEnd) {
+		return "", "", time.Time{}, fmt.Errorf("租赁已过期")
 	}
 	account, err = utils.AESDecrypt(order.Subscription.AccountCipher)
 	if err != nil { return "", "", time.Time{}, fmt.Errorf("解密失败") }

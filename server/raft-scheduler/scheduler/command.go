@@ -10,10 +10,3 @@ type Command struct {
 	TriggerAt time.Time `json:"trigger_at"`
 	Reason    string    `json:"reason"`
 }
-
-// ListAll 返回所有任务
-func (h *TaskHeap) ListAll() []*TaskEntry {
-	entries := make([]*TaskEntry, len(h.items))
-	copy(entries, h.items)
-	return entries
-}

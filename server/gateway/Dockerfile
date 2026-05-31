@@ -7,7 +7,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o /gateway-service ./gateway/main.go
 
 FROM alpine:3.19
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates curl
 COPY --from=builder /gateway-service /usr/local/bin/gateway-service
 EXPOSE 8080
 CMD ["gateway-service"]

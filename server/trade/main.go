@@ -62,9 +62,13 @@ func main() {
 	}
 	defer registry.Deregister(context.Background())
 
-	// 4. 启动 gRPC Server
+	// 4. 创建服务 + 启动 TCC 看门狗
 	svc := service.NewOrderService(db, accountCli, itemCli)
 	h := handler.NewTradeHandler(svc)
+
+	// 启动 TCC 悬挂事务看门狗
+	watchdogCtx, watchdogCancel := context.WithCancel(context.Background())
+	go svc.StartTCCWatchdog(watchdogCtx)
 
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -91,23 +95,35 @@ func main() {
 
 	<-quit
 	log.Println("[Trade] shutting down...")
+	watchdogCancel()
 	grpcServer.GracefulStop()
 	accountConn.Close()
 	itemConn.Close()
 }
 
 func mustDial(cfg *config.Config, serviceName string) *grpc.ClientConn {
-	resolver, err := etcd.NewResolver([]string{cfg.ETCDEndpoints}, serviceName)
+	// ★ 使用连接池化的 ServiceResolver，复用 ETCD 长连接
+	resolver, err := etcd.NewServiceResolver([]string{cfg.ETCDEndpoints}, serviceName)
 	if err != nil {
-		log.Fatalf("[Trade] resolve %s failed: %v", serviceName, err)
+		log.Fatalf("[Trade] resolver %s failed: %v", serviceName, err)
 	}
-	addrs, err := resolver.ListEndpoints(context.Background())
-	if err != nil || len(addrs) == 0 {
-		log.Fatalf("[Trade] no endpoints for %s: %v", serviceName, err)
-	}
-	resolver.Close()
 
-	conn, err := grpc.Dial(addrs[0],
+	// 等待至少一个端点可用
+	var addr string
+	for i := 0; i < 30; i++ {
+		addr, err = resolver.GetEndpoint()
+		if err == nil && addr != "" {
+			break
+		}
+		log.Printf("[Trade] waiting for %s to be ready... (%d/30)", serviceName, i+1)
+		time.Sleep(1 * time.Second)
+	}
+
+	if addr == "" {
+		log.Fatalf("[Trade] finally no endpoints for %s: %v", serviceName, err)
+	}
+
+	conn, err := grpc.Dial(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:    30 * time.Second,

@@ -5,7 +5,7 @@ SET CHARACTER SET utf8mb4;
 CREATE DATABASE IF NOT EXISTS pxx DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE pxx;
 
--- 用户表
+-- 用户�?
 CREATE TABLE IF NOT EXISTS users (
     id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     open_id     VARCHAR(64) NOT NULL DEFAULT '',
@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
     dormitory   VARCHAR(64) NOT NULL DEFAULT '',
     is_verified TINYINT(1) NOT NULL DEFAULT 0,
     balance     BIGINT NOT NULL DEFAULT 0,
+    credit      INT NOT NULL DEFAULT 60,
     role        VARCHAR(20) NOT NULL DEFAULT 'user',
     status      TINYINT NOT NULL DEFAULT 1,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -24,7 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
     UNIQUE INDEX idx_open_id (open_id)
 ) ENGINE=InnoDB;
 
--- 商品表
+-- 商品�?
 CREATE TABLE IF NOT EXISTS products (
     id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     seller_id      BIGINT UNSIGNED NOT NULL,
@@ -48,7 +49,7 @@ CREATE TABLE IF NOT EXISTS products (
     INDEX idx_campus (campus)
 ) ENGINE=InnoDB;
 
--- 订单表
+-- 订单�?
 CREATE TABLE IF NOT EXISTS orders (
     id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     order_no      VARCHAR(32) NOT NULL DEFAULT '',
@@ -69,7 +70,7 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_seller (seller_id)
 ) ENGINE=InnoDB;
 
--- 帖子表
+-- 帖子�?
 CREATE TABLE IF NOT EXISTS posts (
     id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id    BIGINT UNSIGNED NOT NULL,
@@ -88,7 +89,7 @@ CREATE TABLE IF NOT EXISTS posts (
     INDEX idx_type (type)
 ) ENGINE=InnoDB;
 
--- 拼团表
+-- 拼团�?
 CREATE TABLE IF NOT EXISTS group_buys (
     id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     title          VARCHAR(128) NOT NULL,
@@ -106,7 +107,7 @@ CREATE TABLE IF NOT EXISTS group_buys (
     updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 拼团订单表
+-- 拼团订单�?
 CREATE TABLE IF NOT EXISTS group_buy_orders (
     id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     group_buy_id BIGINT UNSIGNED NOT NULL,
@@ -121,7 +122,7 @@ CREATE TABLE IF NOT EXISTS group_buy_orders (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB;
 
--- 租赁物品表
+-- 租赁物品�?
 CREATE TABLE IF NOT EXISTS rental_items (
     id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     owner_id     BIGINT UNSIGNED NOT NULL,
@@ -139,7 +140,7 @@ CREATE TABLE IF NOT EXISTS rental_items (
     INDEX idx_owner (owner_id)
 ) ENGINE=InnoDB;
 
--- 租赁订单表
+-- 租赁订单�?
 CREATE TABLE IF NOT EXISTS rental_orders (
     id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     rental_id    BIGINT UNSIGNED NOT NULL,
@@ -155,7 +156,7 @@ CREATE TABLE IF NOT EXISTS rental_orders (
     INDEX idx_renter (renter_id)
 ) ENGINE=InnoDB;
 
--- 以物换物表
+-- 以物换物�?
 CREATE TABLE IF NOT EXISTS barter_items (
     id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id    BIGINT UNSIGNED NOT NULL,
@@ -169,7 +170,7 @@ CREATE TABLE IF NOT EXISTS barter_items (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB;
 
--- 置换订单表
+-- 置换订单�?
 CREATE TABLE IF NOT EXISTS barter_orders (
     id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     order_no   VARCHAR(32) NOT NULL DEFAULT '',
@@ -185,7 +186,7 @@ CREATE TABLE IF NOT EXISTS barter_orders (
     UNIQUE INDEX idx_order_no (order_no)
 ) ENGINE=InnoDB;
 
--- 用户行为埋点表
+-- 用户行为埋点�?
 CREATE TABLE IF NOT EXISTS user_behaviors (
     id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id     BIGINT UNSIGNED NOT NULL,

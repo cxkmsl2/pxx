@@ -10,10 +10,10 @@ import (
 
 	"gorm.io/gorm"
 )
-
 type ProductService struct {
-	db    *gorm.DB
-	cache *cache.CacheManager
+	db          *gorm.DB
+	cache       *cache.CacheManager
+	UserService *UserService
 }
 
 func NewProductService(db *gorm.DB, cm *cache.CacheManager) *ProductService {
@@ -40,26 +40,41 @@ func (s *ProductService) List(ctx context.Context, category, campus, keyword str
 	}
 
 	query.Count(&total)
-	query.Preload("Seller").Order("created_at DESC").Offset(offset).Limit(limit).Find(&products)
+	query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&products)
+
+	// Populate Sellers for List
+	if s.UserService != nil {
+		for i := range products {
+			if seller, err := s.UserService.GetByID(ctx, products[i].SellerID); err == nil {
+				products[i].Seller = seller
+			}
+		}
+	}
+
 	return products, total, nil
 }
 
 func (s *ProductService) Detail(ctx context.Context, id uint) (*model.Product, error) {
-	// Increment view count
-	s.db.WithContext(ctx).Model(&model.Product{}).Where("id = ?", id).UpdateColumn("view_count", gorm.Expr("view_count + 1"))
+	// Increment view count outside cache loader for accuracy
+	s.db.WithContext(ctx).Model(&model.Product{}).Where("id = ?", id).
+		UpdateColumn("view_count", gorm.Expr("view_count + 1"))
 
 	key := cache.BuildKey("product", id)
 	var p model.Product
 	err := s.cache.GetOrLoad(ctx, key, &p, 30*time.Minute, func(ctx context.Context) (interface{}, error) {
 		var product model.Product
-		if err := s.db.WithContext(ctx).Preload("Seller").First(&product, id).Error; err != nil {
+		if err := s.db.WithContext(ctx).First(&product, id).Error; err != nil {
 			return nil, err
 		}
-		// 更新浏览量
-		s.db.WithContext(ctx).Model(&model.Product{}).Where("id = ?", id).
-			UpdateColumn("view_count", gorm.Expr("view_count + 1"))
 		return &product, nil
 	})
+
+	if err == nil && p.SellerID > 0 && s.UserService != nil {
+		if seller, err := s.UserService.GetByID(ctx, p.SellerID); err == nil {
+			p.Seller = seller
+		}
+	}
+
 	return &p, err
 }
 

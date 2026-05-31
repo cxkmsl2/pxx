@@ -123,19 +123,43 @@ services:
   gateway-service:
     build: { context: ./server, dockerfile: gateway/Dockerfile }
     container_name: pxx-gateway
+    hostname: gateway-service
     ports: ["9090:8080"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
     environment:
       - SERVER_PORT=8080
-      - DB_HOST=mysql-legacy
-      - DB_PORT=3306
+      - ACCOUNT_DB_HOST=mysql-account
+      - ACCOUNT_DB_PORT=3306
+      - ACCOUNT_DB_NAME=pxx_account
+      - ITEM_DB_HOST=mysql-item
+      - ITEM_DB_PORT=3306
+      - ITEM_DB_NAME=pxx_item
+      - TRADE_DB_HOST=mysql-trade
+      - TRADE_DB_PORT=3306
+      - TRADE_DB_NAME=pxx_trade
+      - FEED_DB_HOST=mysql-feed
+      - FEED_DB_PORT=3306
+      - FEED_DB_NAME=pxx_feed
       - DB_USER=root
       - DB_PASS=root123456
-      - DB_NAME=pxx
       - REDIS_ADDR=redis:6379
       - KAFKA_BROKERS=kafka:9092
       - JWT_SECRET=pxx-jwt-secret-2026
+      - ETCD_ENDPOINTS=etcd:2379
     depends_on:
       mysql-legacy:
+        condition: service_healthy
+      mysql-account:
+        condition: service_healthy
+      mysql-item:
+        condition: service_healthy
+      mysql-trade:
+        condition: service_healthy
+      mysql-feed:
         condition: service_healthy
       redis:
         condition: service_started
@@ -145,6 +169,7 @@ services:
   account-service:
     build: { context: ./server, dockerfile: account/Dockerfile }
     container_name: pxx-account
+    hostname: account-service
     ports: ["8081:8080"]
     environment:
       - SERVER_PORT=8080
@@ -165,6 +190,7 @@ services:
   trade-service:
     build: { context: ./server, dockerfile: trade/Dockerfile }
     container_name: pxx-trade
+    hostname: trade-service
     ports: ["8082:8080"]
     environment:
       - SERVER_PORT=8080
@@ -185,6 +211,7 @@ services:
   item-service:
     build: { context: ./server, dockerfile: item/Dockerfile }
     container_name: pxx-item
+    hostname: item-service
     ports: ["8083:8080"]
     environment:
       - SERVER_PORT=8080
@@ -205,6 +232,7 @@ services:
   feed-service:
     build: { context: ./server, dockerfile: feed/Dockerfile }
     container_name: pxx-feed
+    hostname: feed-service
     ports: ["8084:8080"]
     environment:
       - SERVER_PORT=8080
@@ -227,13 +255,14 @@ services:
     build: { context: ./server, dockerfile: raft-scheduler/Dockerfile }
     container_name: pxx-raft-1
     environment:
+      - KAFKA_BROKERS=kafka:9092
       - RAFT_NODE_ID=scheduler-1
       - RAFT_DATA_DIR=/data/raft
       - RAFT_BIND_ADDR=0.0.0.0:7000
       - RAFT_BOOTSTRAP=true
       - TRADE_SERVICE_ADDR=trade-service:8080
     volumes: ["raft-data-1:/data/raft"]
-    ports: ["7000:7000"]
+    ports: ["7000:7000", "17000:17000"]
     depends_on: [trade-service]
     networks: [pxx-net]
 
@@ -241,13 +270,14 @@ services:
     build: { context: ./server, dockerfile: raft-scheduler/Dockerfile }
     container_name: pxx-raft-2
     environment:
+      - KAFKA_BROKERS=kafka:9092
       - RAFT_NODE_ID=scheduler-2
       - RAFT_DATA_DIR=/data/raft
       - RAFT_BIND_ADDR=0.0.0.0:7001
       - RAFT_JOIN_ADDR=raft-scheduler-1:7000
       - TRADE_SERVICE_ADDR=trade-service:8080
     volumes: ["raft-data-2:/data/raft"]
-    ports: ["7001:7001"]
+    ports: ["7001:7001", "17001:17001"]
     depends_on: [raft-scheduler-1]
     networks: [pxx-net]
 
@@ -255,13 +285,14 @@ services:
     build: { context: ./server, dockerfile: raft-scheduler/Dockerfile }
     container_name: pxx-raft-3
     environment:
+      - KAFKA_BROKERS=kafka:9092
       - RAFT_NODE_ID=scheduler-3
       - RAFT_DATA_DIR=/data/raft
       - RAFT_BIND_ADDR=0.0.0.0:7002
       - RAFT_JOIN_ADDR=raft-scheduler-1:7000
       - TRADE_SERVICE_ADDR=trade-service:8080
     volumes: ["raft-data-3:/data/raft"]
-    ports: ["7002:7002"]
+    ports: ["7002:7002", "17002:17002"]
     depends_on: [raft-scheduler-1]
     networks: [pxx-net]
 

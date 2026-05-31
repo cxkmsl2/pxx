@@ -23,8 +23,8 @@ type Task struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
-	Publisher *User `gorm:"foreignKey:PublisherID" json:"publisher,omitempty"`
-	Taker     *User  `gorm:"foreignKey:TakerID" json:"taker,omitempty"`
+	Publisher *User `gorm:"-" json:"publisher,omitempty"` // 跨库不可 Preload
+	Taker     *User `gorm:"-" json:"taker,omitempty"`     // 跨库不可 Preload
 }
 
 func (Task) TableName() string { return "tasks" }

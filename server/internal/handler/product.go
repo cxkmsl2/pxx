@@ -12,14 +12,17 @@ import (
 )
 
 type ProductHandler struct {
-	svc *service.ProductService
+	svc  *service.ProductService
+	List func(c *gin.Context)
 }
 
 func NewProductHandler(svc *service.ProductService) *ProductHandler {
-	return &ProductHandler{svc: svc}
+	h := &ProductHandler{svc: svc}
+	h.List = h.list
+	return h
 }
 
-func (h *ProductHandler) List(c *gin.Context) {
+func (h *ProductHandler) list(c *gin.Context) {
 	category := c.Query("category")
 	campus := c.Query("campus")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

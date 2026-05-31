@@ -50,8 +50,9 @@ func main() {
 	postSvc := service.NewPostService(db)
 
 	// 4. 启动 Kafka 消费者
+	ctx, cancel := context.WithCancel(context.Background())
 	if cfg.KafkaBros != "" {
-		consumer.StartFeedConsumer(cfg.KafkaBros, postSvc)
+		consumer.StartFeedConsumer(ctx, cfg.KafkaBros, postSvc)
 		log.Println("[Feed] Kafka consumer started")
 	}
 
@@ -63,6 +64,7 @@ func main() {
 	<-quit
 
 	log.Println("[Feed] shutting down...")
+	cancel()
 	registry.Deregister(context.Background())
 }
 

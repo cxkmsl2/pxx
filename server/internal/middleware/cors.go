@@ -16,8 +16,8 @@ func CORS() gin.HandlerFunc {
 			c.AbortWithStatus(204)
 			return
 		}
+		start := time.Now()
 		c.Next()
-		// 记录请求耗时
-		_ = time.Since(time.Now())
+		_ = time.Since(start)
 	}
 }

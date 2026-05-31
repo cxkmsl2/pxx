@@ -28,7 +28,7 @@ func (s *TaskService) List(ctx context.Context, taskType string, page, pageSize 
 	if taskType != "" {
 		query = query.Where("type = ?", taskType)
 	}
-	query.Count(&total).Order("created_at DESC").Offset(offset).Limit(limit).Preload("Publisher").Find(&items)
+	query.Count(&total).Order("created_at DESC").Offset(offset).Limit(limit).Find(&items)
 	return items, total, nil
 }
 

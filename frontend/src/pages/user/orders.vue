@@ -102,6 +102,11 @@ const doConfirm = async (id: number) => {
   } catch { window.$toast('操作失败', 'error') }
 }
 
+const toTribunal = (id: number) => {
+  window.$toast('请在小法庭页面发起纠纷')
+  router.push('/tribunal')
+}
+
 const showMsg = (m: string) => window.$toast(m)
 
 onMounted(() => loadOrders())

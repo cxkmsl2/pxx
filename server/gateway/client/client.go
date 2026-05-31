@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"time"
@@ -31,41 +30,50 @@ type Clients struct {
 func InitClients(cfg *config.Config) *Clients {
 	c := &Clients{}
 
-	c.Account = mustDialAccount(cfg)
-	c.Item = mustDialItem(cfg)
-	c.Trade = mustDialTrade(cfg)
+	c.Account = c.mustDialAccount(cfg)
+	c.Item = c.mustDialItem(cfg)
+	c.Trade = c.mustDialTrade(cfg)
 
 	log.Println("[Gateway] all gRPC clients ready")
 	return c
 }
 
-func mustDialAccount(cfg *config.Config) account.AccountClient {
-	conn := mustDial(cfg, ServiceAccount)
+func (c *Clients) mustDialAccount(cfg *config.Config) account.AccountClient {
+	conn := c.mustDial(cfg, ServiceAccount)
 	return account.NewAccountClient(conn)
 }
 
-func mustDialItem(cfg *config.Config) item.ItemClient {
-	conn := mustDial(cfg, ServiceItem)
+func (c *Clients) mustDialItem(cfg *config.Config) item.ItemClient {
+	conn := c.mustDial(cfg, ServiceItem)
 	return item.NewItemClient(conn)
 }
 
-func mustDialTrade(cfg *config.Config) trade.TradeClient {
-	conn := mustDial(cfg, ServiceTrade)
+func (c *Clients) mustDialTrade(cfg *config.Config) trade.TradeClient {
+	conn := c.mustDial(cfg, ServiceTrade)
 	return trade.NewTradeClient(conn)
 }
 
-func mustDial(cfg *config.Config, serviceName string) *grpc.ClientConn {
-	resolver, err := etcd.NewResolver([]string{cfg.ETCDEndpoints}, serviceName)
+func (c *Clients) mustDial(cfg *config.Config, serviceName string) *grpc.ClientConn {
+	resolver, err := etcd.NewServiceResolver([]string{cfg.ETCDEndpoints}, serviceName)
 	if err != nil {
-		log.Fatalf("[Gateway] resolve %s failed: %v", serviceName, err)
+		log.Fatalf("[Gateway] resolver %s failed: %v", serviceName, err)
 	}
-	addrs, err := resolver.ListEndpoints(context.Background())
-	if err != nil || len(addrs) == 0 {
-		log.Fatalf("[Gateway] no endpoints for %s: %v", serviceName, err)
-	}
-	resolver.Close()
 
-	target := addrs[0]
+	// 等待至少一个端点可用 (缩短启动阻塞)
+	var target string
+	for i := 0; i < 50; i++ {
+		target, _ = resolver.GetEndpoint()
+		if target != "" {
+			break
+		}
+		time.Sleep(100 * time.Millisecond) // 每次等100ms，总共最多等5秒
+	}
+
+	if target == "" {
+		log.Printf("[Gateway] warning: no endpoints for %s yet, will try to dial anyway", serviceName)
+		// 如果还没找到，暂时使用服务名作为假目标，gRPC 底层会处理
+		target = serviceName
+	}
 	conn, err := grpc.Dial(target,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -74,8 +82,15 @@ func mustDial(cfg *config.Config, serviceName string) *grpc.ClientConn {
 		}),
 	)
 	if err != nil {
-		log.Fatalf("[Gateway] dial %s (%s) failed: %v", serviceName, target, err)
+		log.Printf("[Gateway] dial %s (%s) failed: %v", serviceName, target, err)
 	}
+
+	// 注册关闭函数
+	c.cleanups = append(c.cleanups, func() {
+		if conn != nil { conn.Close() }
+		resolver.Close()
+	})
+
 	return conn
 }
 

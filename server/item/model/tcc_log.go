@@ -10,7 +10,7 @@ type TCCLog struct {
 	ActionType  string    `gorm:"size:16" json:"action_type"`     // LOCK_STOCK / DEDUCT_STOCK / UNLOCK_STOCK
 	Status      string    `gorm:"size:16" json:"status"`          // TRYING / LOCKED / CONFIRMED / CANCELLED / FAILED
 	ProductID   uint64    `gorm:"default:0" json:"product_id"`
-	Payload     string    `gorm:"type:json" json:"payload"`
+	Payload     string    `gorm:"type:json;default:'{}'" json:"payload"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
