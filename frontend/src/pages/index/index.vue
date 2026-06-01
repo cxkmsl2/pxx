@@ -24,7 +24,7 @@
     <div class="section-head" @click="doRefresh">热门推荐 <span class="rf">↻</span></div>
     <div class="waterfall" v-if="!loading">
       <div class="wf-card" v-for="item in products" :key="item.id" @click="$router.push('/product/'+item.id)">
-        <div class="wf-pic" :class="item.images ? '' : 'bg' + (item.id % 4)" :style="{ height: (120 + (item.id % 3) * 40) + 'px', backgroundImage: getImg(item) }"></div>
+        <div class="wf-pic" :class="(item.images && item.images !== '[]' && item.images !== '') ? '' : 'bg' + (item.id % 4)" :style="{ height: (120 + (item.id % 3) * 40) + 'px', backgroundImage: getImg(item) }"></div>
         <div class="wf-info"><div class="wf-title">{{ item.title }}</div><div class="wf-price">¥{{ (item.price / 100).toFixed(2) }}</div><div class="wf-meta">{{ item.campus }}</div></div>
       </div>
     </div>

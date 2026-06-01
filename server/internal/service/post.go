@@ -21,19 +21,33 @@ func NewPostService(db *gorm.DB, cm *cache.CacheManager) *PostService {
 	return &PostService{db: db, cache: cm}
 }
 
-func (s *PostService) List(ctx context.Context, ptype int8, tag string, page, pageSize int) ([]model.Post, int64, error) {
+// List 获取帖子列表（支持常规分页与游标分页）
+func (s *PostService) List(ctx context.Context, ptype int8, tag string, page, pageSize int, cursorTime int64, cursorId uint) ([]model.Post, int64, error) {
 	offset, limit := utils.Paginate(page, pageSize)
 	var total int64
 	var posts []model.Post
 	query := s.db.WithContext(ctx).Model(&model.Post{}).Where("status = 1")
+	
 	if ptype > 0 {
 		query = query.Where("type = ?", ptype)
 	}
 	if tag != "" {
 		query = query.Where("tags LIKE ?", "%"+tag+"%")
 	}
-	query.Count(&total)
-	query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&posts)
+
+	if cursorTime > 0 {
+		// 游标分页模式：不需要 Count，不需要 Offset
+		total = -1 // 标识游标模式无总数
+		t := time.UnixMilli(cursorTime)
+		query = query.Where("(created_at < ?) OR (created_at = ? AND id < ?)", t, t, cursorId)
+		query.Order("created_at DESC, id DESC").Limit(limit).Find(&posts)
+	} else {
+		// 传统分页模式：回退到 Offset 和 Count
+		query.Count(&total)
+		// 增加 id DESC 保证同秒发帖排序稳定
+		query.Order("created_at DESC, id DESC").Offset(offset).Limit(limit).Find(&posts)
+	}
+
 	return posts, total, nil
 }
 

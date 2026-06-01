@@ -68,21 +68,25 @@ func (s *PostService) ProcessEvent(data []byte) error {
 	return s.db.Create(post).Error
 }
 
-// List 帖子列表
-func (s *PostService) List(ctx context.Context, postType int8, page, pageSize int) ([]feedModel.Post, int64, error) {
-	offset := (page - 1) * pageSize
-	if offset < 0 { offset = 0 }
+// List 帖子列表 (支持游标分页)
+func (s *PostService) List(ctx context.Context, postType int8, pageSize int, cursorTime int64, cursorId uint) ([]feedModel.Post, int64, error) {
 	if pageSize <= 0 { pageSize = 20 }
 
-	var total int64
 	var posts []feedModel.Post
 	query := s.db.WithContext(ctx).Model(&feedModel.Post{}).Where("status = 1")
 	if postType > 0 {
 		query = query.Where("type = ?", postType)
 	}
-	query.Count(&total)
-	query.Order("created_at DESC").Offset(offset).Limit(int(pageSize)).Find(&posts)
-	return posts, total, nil
+	
+	// 游标分页核心逻辑
+	if cursorTime > 0 {
+		t := time.UnixMilli(cursorTime)
+		query = query.Where("(created_at < ?) OR (created_at = ? AND id < ?)", t, t, cursorId)
+	}
+
+	// 游标模式直接基于索引查找，无需 Offset，也无需 Count（耗时）
+	query.Order("created_at DESC, id DESC").Limit(pageSize).Find(&posts)
+	return posts, 0, nil
 }
 
 // Create 直接创建帖子（传统同步方式，留给迁移期使用）

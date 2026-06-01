@@ -71,8 +71,8 @@ func (c *Clients) mustDial(cfg *config.Config, serviceName string) *grpc.ClientC
 
 	if target == "" {
 		log.Printf("[Gateway] warning: no endpoints for %s yet, will try to dial anyway", serviceName)
-		// 如果还没找到，暂时使用服务名作为假目标，gRPC 底层会处理
-		target = serviceName
+		// 如果还没找到，暂时使用服务名作为假目标，补充默认的 8080 端口让 Docker DNS 兜底
+		target = fmt.Sprintf("%s:8080", serviceName)
 	}
 	conn, err := grpc.Dial(target,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),

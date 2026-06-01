@@ -24,7 +24,9 @@ func (h *PostHandler) List(c *gin.Context) {
 	tag := c.Query("tag")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	posts, total, err := h.svc.List(c.Request.Context(), int8(ptype), tag, page, pageSize)
+	cursorTime, _ := strconv.ParseInt(c.Query("cursor_time"), 10, 64)
+	cursorID, _ := strconv.ParseUint(c.Query("cursor_id"), 10, 64)
+	posts, total, err := h.svc.List(c.Request.Context(), int8(ptype), tag, page, pageSize, cursorTime, uint(cursorID))
 	if err != nil {
 		response.Error(c, err.Error())
 		return

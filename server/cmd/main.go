@@ -43,7 +43,7 @@ func main() {
 	}
 
 	// 3. 初始化缓存和组件
-	cache.InitLocalCache()
+	// cache.InitLocalCache()
 	ws.InitHub()
 	utils.InitMinio("pxx-minio:9000", "pxxadmin", "pxxminio123")
 	cache.InitBloomFilter(1000000, 3)
